@@ -5,7 +5,7 @@ A small Node.js application that monitors your Lost Ark queue and notifies you w
 ## How does it work?
 
 It's pretty simple: it takes a screenshot of your monitor and use [OCR](https://github.com/tesseract-ocr/) to
-recognize key-words that should be present on the screen when you are in character select. [Pushbullet](https://www.pushbullet.com/) integration gives you a notifcation straight to your device!
+recognize keywords that should be present on the screen when you are in character select. [Pushbullet](https://www.pushbullet.com/) integration gives you a notifcation straight to your device!
 
 There's no automation at play here!
 
@@ -19,6 +19,7 @@ There's no automation at play here!
 
 If you are not familiar with command lines, you can use the batch scripts in the `bin`-folder.
 Just double-click the `quickstart.bat` and it will install dependencies and run the program.
+If you want `PushBullet` notifications, run `quickstartSetup.bat` instead. This will run you through a wizard to get `PushBullet` up and running.
 
 ### Terminal
 
@@ -31,7 +32,7 @@ See [CLI options](#cli-options) for more arguments.
 
 By default it takes screenshots of Lost Ark, and plays an alert when it thinks you are in Character Select screen.
 
-Ideally, you should try running the program on a character-select screen (eg. log into a low-population server), and verify that it recognizes that you are not in a queue. You can also use the `dry` command below to check that notification sound works (note that this may be loud).
+Ideally, you should try running the program on a character-select screen, and verify that it recognizes that you are not in a queue. You can also use the `dry` command below to check that notification sound works (note that this may be loud).
 
 ### Notifications
 
@@ -74,12 +75,12 @@ Rerun first-time setup. E.g change PushBullet-device.
 
 ### --debug, -d
 
-Sets log level to debug. Also outputs the processed image the OCR uses for recognition to `output.png`.
+Sets log level to debug. Also outputs the processed image the OCR uses for recognition to `processed.png`, and the raw screenshot to `screenshot.png`.
 
 ## Limitations
 
 -   Lost Ark should preferebly be running in `windowed` or `borderless` windowed mode.
-    The screencapture does not work if running in Fullscreen and the window is minmized. This is due to the render-loop being paused, and there's no way around that.
+    The screen-capture does not work if running in Fullscreen and the window is minimized. This is due to the render-loop being paused, and there's no way around that.
 
 -   There has been very limited testing. I created this for myself, based on code I wrote for the same purpose for WoW Classic release. I have not tested on different monitors, resolutions or other versions than Windows 10. Please raise an issue if you face bugs.
 

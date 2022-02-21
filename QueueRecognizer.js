@@ -29,7 +29,7 @@ class QueueRecognizer {
 
         this.pos = null;
 
-        this.retries = 1;
+        this.retries = 10;
     }
 
     async terminate() {

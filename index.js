@@ -90,14 +90,14 @@ async function interactiveStart(argv, recognizer) {
         }
         case 'setup': {
             argv.setup = true;
-            await setup(argv, recognizer.notifer);
+            await setup(argv, recognizer.notifier);
             break;
         }
         case 'exit': {
             return;
         }
     }
-    await interactiveStart(argv);
+    await interactiveStart(argv, recognizer);
 }
 
 async function setup(argv, notifier) {
