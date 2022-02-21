@@ -13,13 +13,15 @@ class Notifier {
 
     async init(apiKey, argv) {
         if (!apiKey) {
-            if(argv.setup) {
-                apiKey = await this.askApiKey()
+            if (argv.setup) {
+                apiKey = await this.askApiKey();
             }
-            if(!apiKey) {
+            if (!apiKey) {
                 log.info('Notifier not configured. Rerun with -s to setup.');
-                return
+                return;
             }
+            config.PUSHBULLET.API_KEY = apiKey;
+            writeConfig();
         }
 
         this.createPB(apiKey);
@@ -38,7 +40,7 @@ class Notifier {
         } else {
             this.device = config.PUSHBULLET.DEVICE_ID;
             this.active = true;
-        }       
+        }
     }
 
     createPB(apiKey) {
@@ -49,22 +51,27 @@ class Notifier {
     }
 
     async askApiKey() {
+        const rightClickToPasteHint =
+            process.platform === 'win32'
+                ? 'Right-click to copy from clipboard'
+                : '';
         const questions = [
             {
                 type: 'confirm',
-                message: 'No API key found, do you want to setup pushbullet now?',
+                message:
+                    'No API key found, do you want to setup pushbullet now?',
                 name: 'apiKeySetup',
             },
             {
                 type: 'input',
                 name: 'apiKey',
                 when: (answers) => answers.apiKeySetup,
-                message: 'Input the API-key from Pushbullet Account page (https://www.pushbullet.com/#settings/account)\n',
-            }
-        ]
+                message: `Input the Access Token from Pushbullet Account page (https://www.pushbullet.com/#settings/account)\n (${rightClickToPasteHint}):`,
+            },
+        ];
         const answers = await inquirer.prompt(questions);
-        const apiKey = answers.apiKey
-        if(apiKey) {
+        const apiKey = answers.apiKey;
+        if (apiKey) {
             return apiKey;
         }
         return false;
@@ -76,16 +83,16 @@ class Notifier {
                 type: 'list',
                 message: 'Select a device to send notifications to:',
                 name: 'device',
-                choices:
-                    devices.map(d => ({
+                choices: devices
+                    .map((d) => ({
                         name: `${d.nickname} [${d.type}]`,
                         value: d,
                     }))
                     .concat({
                         name: 'All devices',
                         value: { nickname: 'All devices', iden: null },
-                    })
-                }
+                    }),
+            },
         ];
     }
 
@@ -96,7 +103,9 @@ class Notifier {
                 log.error('No devices found.');
                 return;
             }
-            const answer = await inquirer.prompt(this.setupQuestions(res.devices));
+            const answer = await inquirer.prompt(
+                this.setupQuestions(res.devices)
+            );
             this.device = answer.device.iden;
             config.PUSHBULLET.DEVICE_ID = this.device;
             writeConfig();

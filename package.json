@@ -1,5 +1,5 @@
 {
-    "name": "classicqueuenotification",
+    "name": "la-queue-monitor",
     "version": "0.0.0",
     "description": "",
     "main": "index.js",
@@ -10,11 +10,14 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "edge-js": "^16.6.0",
         "inquirer": "^7.0.0",
+        "jimp": "^0.16.1",
         "pushbullet": "^2.4.0",
         "screenshot-desktop": "^1.9.0",
-        "sharp": "^0.23.0",
-        "tesseract.js": "^2.0.0-alpha.15",
+        "screenshot-window-js": "^1.0.0",
+        "sharp": "^0.30.1",
+        "tesseract.js": "^2.1.5",
         "ulog": "^1.1.0"
     }
 }

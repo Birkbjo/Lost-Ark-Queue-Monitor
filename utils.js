@@ -2,12 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const child_process = require('child_process');
 const { promisify } = require('util');
+const log = require('ulog')('utils');
 
 const execFile = promisify(child_process.execFile);
+
 const USER_CONFIG = 'config.json';
-const configPath = p => path.join(__dirname, p);
+const configPath = (p) => path.join(__dirname, p);
 const configLocs = ['default.config.json', USER_CONFIG].map(configPath);
-const log = require('ulog')('utils');
+
 let CONFIG = null;
 
 function writeConfig(override) {
@@ -30,10 +32,12 @@ function getConfig() {
     if (CONFIG) {
         return CONFIG;
     }
+
     CONFIG = configLocs
-        .map(cfg => loadFile(cfg))
-        .filter(cfg => !!cfg)
+        .map((cfg) => loadFile(cfg))
+        .filter((cfg) => !!cfg)
         .reduce((acc, cfg) => ({ ...acc, ...cfg }), {});
+
     return CONFIG;
 }
 
@@ -41,9 +45,11 @@ async function playSound(filePath) {
     const playPath = path.isAbsolute(filePath)
         ? path.normalize(filePath)
         : path.normalize(path.join(__dirname, filePath));
+
     const opts = {
-        timeout: 30000
+        timeout: 30000,
     };
+
     if (process.platform === 'win32') {
         return execFile(
             'cscript.exe',
@@ -56,12 +62,12 @@ async function playSound(filePath) {
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 module.exports = {
     config: getConfig(),
     playSound,
     sleep,
-    writeConfig
+    writeConfig,
 };
