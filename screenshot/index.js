@@ -1,7 +1,6 @@
 const path = require('path');
 const util = require('util');
 const edge = require('edge-js');
-const sharp = require('sharp');
 
 const cSharpFile = path.join(__dirname, 'WinScreenshot.cs');
 // Create a reference to the C# function.
@@ -29,12 +28,3 @@ const api = {
 };
 
 module.exports = api;
-api.listWindows().then((res) => console.log(res));
-api.screenshotWindowName('cmder', 'tester')
-    .then((res) => {
-        console.log('finito,', res);
-        //sharp(res).toFile('fromcs.png');
-    })
-    .catch((e) => {
-        console.log('failed', e);
-    });

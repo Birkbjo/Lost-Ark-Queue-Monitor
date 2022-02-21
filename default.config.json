@@ -6,6 +6,5 @@
     "PLAY_SOUND": "assets/victory.mp3",
     "CHECK_INTERVAL": 30000,
     "UPDATE_INTERVAL": 1800000,
-    "POSITION_THRESHOLD": 200,
-    "DISPLAY": 0
+    "POSITION_THRESHOLD": 200
 }

@@ -1,7 +1,6 @@
 const { promisify } = require('util');
 const Pushbullet = require('pushbullet');
 const inquirer = require('inquirer');
-const fs = require('fs');
 const log = require('ulog')('notifier');
 const { writeConfig, config } = require('./utils.js');
 

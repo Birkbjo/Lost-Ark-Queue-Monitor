@@ -1,12 +1,7 @@
-const screenshot = require('screenshot-desktop');
-const { TesseractWorker, OEM, PSM, createWorker } = require('tesseract.js');
 const Notifier = require('./notify');
-const fs = require('fs');
-const path = require('path');
 const log = require('ulog')('WQA');
-const sharp = require('sharp');
 const inquirer = require('inquirer');
-const { writeConfig, sleep, config, playSound } = require('./utils');
+const { config } = require('./utils');
 const QueueRecognizer = require('./QueueRecognizer.js');
 
 const bottomBar = new inquirer.ui.BottomBar();
@@ -105,35 +100,8 @@ async function interactiveStart(argv, recognizer) {
     await interactiveStart(argv);
 }
 
-async function interactiveDisplay(argv) {
-    const displays = await screenshot.listDisplays();
-
-    if (displays.length < 2) {
-        log.info('Only one monitor found. Using primary.');
-        return;
-    }
-    const answer = await inquirer.prompt([
-        {
-            type: 'list',
-            message: 'Select the monitor that Lost Ark is running on:',
-            name: 'display',
-            choices: displays.map((d) => ({
-                name: `${d.name} (id: ${d.id})${d.primary ? ' [Primary]' : ''}`,
-                value: d,
-            })),
-        },
-    ]);
-    const display = answer.display;
-    config.DISPLAY = display.id;
-    writeConfig();
-    log.info('Display selected:', display.name);
-}
-
 async function setup(argv, notifier) {
     await notifier.init(config.PUSHBULLET.API_KEY, argv);
-    if (argv.setup) {
-        await interactiveDisplay();
-    }
 }
 
 async function main(args) {
@@ -141,6 +109,9 @@ async function main(args) {
 
     const notifier = new Notifier();
     const recognizer = new QueueRecognizer(argv, notifier, bottomBar);
+
+    recognizer.startTime = new Date().setHours(12, 45);
+    recognizer.startPos = 14500;
 
     if (argv.interactive) {
         await interactiveStart(argv, recognizer);

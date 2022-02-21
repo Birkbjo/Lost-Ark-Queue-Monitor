@@ -64,11 +64,9 @@ public class ScreenCapture
     }
     private static Image CaptureWindowFromDC(IntPtr handle, IntPtr hdcSrc, RECT windowRect)
     {
-        Console.WriteLine("Capturing " + handle);
         // get the size
         int width = windowRect.right - windowRect.left;
         int height = windowRect.bottom - windowRect.top;
-        Console.WriteLine("W H" + width + " " + height);
 
         // create a device context we can copy to
         IntPtr hdcDest = GDI32.CreateCompatibleDC(hdcSrc);
@@ -486,10 +484,8 @@ public class ScreenCapture
                 var builder = new StringBuilder(length);
 
                 GetWindowText(wnd, builder, length + 1);
-                Console.WriteLine(name + ' ' + builder.ToString());
                 if (builder.ToString().ToLower().StartsWith(name.ToLower()))
                 {
-                    Console.WriteLine("FOUND MATCH", builder.ToString());
                     matchingWindow = wnd;
                     return false;
                 }
@@ -672,7 +668,7 @@ public class Startup
             string windowName = (string)input.name;
             if (String.IsNullOrEmpty(windowName))
             {
-                return new KeyNotFoundException("Name of Window required");
+                return new ArgumentException("Name of Window required");
             }
             else
             {
@@ -681,7 +677,7 @@ public class Startup
 
             if (wndHandle == IntPtr.Zero)
             {
-                return new KeyNotFoundException("Window not found: " + windowName);
+                return new WindowNotFoundException("Window not found: " + windowName);
             }
 
             Image img = sc.CaptureWindow(wndHandle);
@@ -725,3 +721,20 @@ public class Startup
 }
 
 
+
+public class WindowNotFoundException : Exception
+{
+    public WindowNotFoundException()
+    {
+    }
+
+    public WindowNotFoundException(string message)
+        : base(message)
+    {
+    }
+
+    public WindowNotFoundException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
+}

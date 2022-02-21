@@ -1,4 +1,4 @@
-# WoW-Queue-Alert
+# Lost Ark Queue Monitor
 
 A small Node.js application that monitors your Lost Ark queue and notifies you when it's your turn to play! It even works when Lost Ark is running in the background (see [Limitations](#limitations))!
 
@@ -57,8 +57,6 @@ The user configuration-file is located in `config.json`. If you haven't ran the 
 `UPDATE_INTERVAL` - Time in `ms` between every position notification update. Default: 180000 (30min).
 
 `POSITION_THRESHOLD` - Queue position threshold for sending a notification regardless of `UPDATE_INTERVAL`. If your position is lower than this, a notifcation is sent. Default: 200
-
-`DISPLAY` - The display ID that WoW is running in. When you run `npm run dry` several `.png`-files will be saved to the `current working directory` , eg. `0.png`. You can run this command and look at the images to find the correct ID of your monitor.
 
 ### CLI options
 

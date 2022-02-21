@@ -1,13 +1,10 @@
-const screenshot = require('screenshot-desktop');
-const { TesseractWorker, OEM, PSM, createWorker } = require('tesseract.js');
+const { createWorker } = require('tesseract.js');
 const Notifier = require('./notify');
-const fs = require('fs');
-const path = require('path');
 const log = require('ulog')('WQA');
 const sharp = require('sharp');
-const inquirer = require('inquirer');
-const childProcess = require('child_process');
-const { writeConfig, sleep, config, playSound } = require('./utils');
+const { sleep, config, playSound, formatSecondsToTime } = require('./utils');
+
+const WinScreenshot = require('./screenshot/index.js');
 
 class QueueRecognizer {
     constructor({ debug, mute, fullCapture }, notifier, bottomBar) {
@@ -24,12 +21,20 @@ class QueueRecognizer {
                 );
             },
         });
+
         this.startTime = null;
         this.startPos = null;
         this.positionNotificationSent = false;
         this.lastNotificationTime = new Date();
 
         this.pos = null;
+
+        this.retries = 1;
+    }
+
+    async terminate() {
+        await this.ocrWorker.terminate();
+        this.bottomBar.close();
     }
 
     async run(argv) {
@@ -39,29 +44,23 @@ class QueueRecognizer {
 
         const sleepT = config.CHECK_INTERVAL || 60000;
         let loggedIn = false;
-        let lastUpdate = new Date();
-        let retryNoQueue = 10;
+        this.startTime = this.startTime ? this.startTime : new Date();
 
-        log.info('Lost Ark Queue Notifier running... (Press Ctrl+C to exit)');
+        this.bottomBar.log.write(
+            'Lost Ark Queue Notifier running... (Press Ctrl+C to exit)'
+        );
         while (loggedIn === false) {
-            const img = await screenShot(config.DISPLAY);
+            const img = await this.screenshot();
             let [screenText, words] = await this.recognize(img);
+
+            log.debug(screenText);
             if (!screenText) {
                 log.error('No screentext found');
-                // check for logged in
-                //process.exit(-1);
             }
             loggedIn = await this.isProbablyLoggedIn(words, img);
             if (!loggedIn) {
-                const didNotify = this.handleNotLoggedIn(
-                    words,
-                    retryNoQueue,
-                    lastUpdate
-                );
+                await this.handleNotLoggedIn(words);
 
-                if (didNotify) {
-                    lastUpdate = new Date();
-                }
                 await sleep(sleepT);
             }
         }
@@ -85,7 +84,16 @@ class QueueRecognizer {
             'character',
             'settings',
         ];
-        const queueWords = ['waiting', 'server', 'queue', 'number'];
+        const queueWords = [
+            'waiting',
+            'overloaded',
+            'moment',
+            'server',
+            'queue',
+            'number',
+            'pleaase',
+            'wait',
+        ];
 
         const countWords = (tessWords) => {
             let queueWordMatches = [];
@@ -104,19 +112,15 @@ class QueueRecognizer {
 
         let [queueWordMatches, loggedInMatches] = countWords(tesseractWords);
 
-        if (queueWordMatches.length <= minMatches) {
+        if (queueWordMatches.length < minMatches) {
             log.debug('No queue found, check if logged in');
-            const imageMetadata = await sharp(img).metadata();
-            console.log(imageMetadata);
-            let [screenText, words] = await this.recognize(img, {
-                left: imageMetadata.width / 2 - 250,
-                top: imageMetadata.height - 120,
-                width: imageMetadata.width - (imageMetadata.width / 2 - 250),
-                height: 120,
-            });
+            let [screenText, words] = await this.recognize(
+                img,
+                IMAGE_POSITION.BOTTOM
+            );
             [queueWordMatches, loggedInMatches] = countWords(words);
-            console.log(queueWordMatches, loggedInMatches);
         }
+        log.debug({ queueWordMatches, loggedInMatches });
         return (
             loggedInMatches.length >= minMatches &&
             queueWordMatches.length < minMatches
@@ -142,33 +146,50 @@ class QueueRecognizer {
         return null;
     }
 
-    async recognize(img, extractOpts) {
-        const imageMetadata = await sharp(img).metadata();
-        console.log(imageMetadata);
-        if (!extractOpts) {
-            extractOpts = {
-                left: imageMetadata.width / 2 - 250,
-                top: imageMetadata.height / 2 - 150,
-                width: 500,
-                height: 250,
-            };
+    async screenshot() {
+        try {
+            // return sharp('./unknown.png').toBuffer();
+            const ss = await WinScreenshot.screenshotWindowName('lost ark');
+            return ss;
+        } catch (e) {
+            if (e.name === WindowNotFoundException) {
+                this.bottomBar.log.write(
+                    'Lost Ark Window not found, is Lost Ark running?'
+                );
+            }
+            log.error('Failed to take screenshot: ', e);
         }
-        if (!this.fullCapture) {
-            const rectImg = await sharp(img)
-                .extract(extractOpts)
-                .sharpen()
-                .threshold(120);
+    }
 
-            // await rectImg.toFile('rect.png');
-            img = await rectImg.toBuffer();
-        } else {
-            img = await sharp(img).threshold(120).toBuffer();
-        }
-
-        const job = this.ocrWorker.recognize(img);
+    async processScreenshot(img, imagePosition = IMAGE_POSITION.CENTER) {
+        let s = sharp(img);
 
         if (this.debug) {
-            rectImg.toFile('rect.png');
+            s.toFile('screenshot.png');
+        }
+        if (!this.fullCapture) {
+            const metadata = await s.metadata();
+            const extractOpts = await getExtractImageOptions(
+                metadata,
+                imagePosition
+            );
+            s.extract(extractOpts);
+        }
+        return s.threshold(90);
+    }
+
+    async recognize(img, processOpts = { position: IMAGE_POSITION.CENTER }) {
+        if (processOpts) {
+            img = await this.processScreenshot(img, processOpts.position);
+        } else {
+            img = await sharp(img);
+        }
+
+        const imgBuffer = await img.toBuffer();
+        const job = this.ocrWorker.recognize(imgBuffer);
+
+        if (this.debug) {
+            await img.toFile('processed.png');
         }
 
         try {
@@ -182,19 +203,23 @@ class QueueRecognizer {
         }
     }
 
-    handlePositionUpdate(pos, lastUpdate) {
+    handlePositionUpdate(pos) {
         const updateThreshold = config.UPDATE_INTERVAL || 1800000; // 30 min
         const positionThreshold = config.POSITION_THRESHOLD || 200;
         const now = new Date();
-        //log.debug('Position:', pos, ' Estimated time:', time);
+        const lastUpdate = this.lastNotificationTime;
+
+        if (this.startPos == null) {
+            this.startPos = pos;
+        }
+
         const positionSend =
             !this.positionNotificationSent && pos <= positionThreshold;
 
         if (positionSend) {
+            positionNotificationSent = true;
             log.debug('Position below threshold, sending notification');
-            this.positionNotificationSent = true;
         }
-        log.debug(now - lastUpdate);
         if (positionSend || now - lastUpdate >= updateThreshold) {
             if (this.notifier.active) {
                 this.notifier.notify(
@@ -205,18 +230,23 @@ class QueueRecognizer {
             }
             return true;
         }
+
+        const { estimatedTime, etaDate } = this.getEstimatedTime(pos);
+        const etaStr = etaDate.toTimeString().substr(0, 8);
+        this.bottomBar.updateBottomBar(
+            `Position: ${pos}. Estimated time left: ${estimatedTime}. Eta: ${etaStr}`
+        );
         return false;
     }
 
-    handleNotLoggedIn(words, retries, lastUpdate, startTime, startPos, img) {
+    async handleNotLoggedIn(words) {
         const pos = this.recognizeQueuePosition(words);
-        let didNotify = false;
-        let posStr = pos ? `Position: ${pos}.\n` : '';
+
         if (pos) {
-            didNotify = this.handlePositionUpdate(pos, lastUpdate);
+            this.handlePositionUpdate(pos);
         } else {
-            if (retries-- < 1) {
-                log.warn(
+            if (this.retries-- < 1) {
+                this.bottomBar.log.write(
                     'Queue not recognized for a long time, shutting down...'
                 );
                 if (this.notifier.active) {
@@ -225,23 +255,49 @@ class QueueRecognizer {
                         'Could not recognize queue position for a long time. Please verify Lost Ark is running.'
                     );
                 }
+                await this.terminate();
                 process.exit(-1);
             }
-            log.warn(
-                `Queue not recognized. Is Lost Ark running on the specified monitor (${config.DISPLAY})?`
+            this.bottomBar.log.write(
+                `Lost Ark window found, but queue not recognized. Are you sure you are in queue?`
+            );
+            this.bottomBar.log.write(
+                'If this continues, please rerun with --debug and check the output of the screenshot.png and processed.png'
             );
         }
-        this.bottomBar.updateBottomBar(`${posStr}Waiting for next check...`);
-        return didNotify;
+        //this.bottomBar.updateBottomBar(`${posStr}Waiting for next check...`);
+    }
+
+    getEstimatedTime(pos) {
+        if (!this.startTime || pos === this.startPos) {
+            return {
+                estimatedTime: null,
+                etaDate: null,
+            };
+        }
+
+        const deltaPos = this.startPos - pos;
+        const deltaTimeSeconds = Math.floor(
+            (new Date() - this.startTime) / 1000
+        );
+        const posPerSec = deltaPos / deltaTimeSeconds;
+        const secondsLeft = Math.floor(pos / posPerSec);
+
+        return {
+            estimatedTime: formatSecondsToTime(secondsLeft),
+            etaDate: new Date(Date.now() + secondsLeft * 1000),
+        };
     }
 
     async queueFinished(argv) {
         if (this.notifier.active) {
+            log.info('Notifying your devices');
             const body = "It's your turn to play, get ready!";
             this.notifier.notify('Lost Ark queue complete!', body);
         }
         if (!this.mute && config.PLAY_SOUND) {
             try {
+                log.debug('Playing sound alert');
                 await playSound(config.PLAY_SOUND);
             } catch (e) {
                 log.error('Failed to play sound:', e.message);
@@ -250,44 +306,11 @@ class QueueRecognizer {
     }
 
     async dryRun(argv) {
-        const displays = await screenshot.listDisplays();
-        for (d in displays) {
-            const display = displays[d];
-            screenShot(display.id, d).catch((err) => {
-                log.error('Failed to screenshot:', err);
-            });
-        }
+        const ss = await this.screenshot();
+        await sharp(ss).toFile('screenshot.png');
         await this.queueFinished(argv);
+        this.terminate();
     }
-}
-
-async function screenShot(screen = 0, filename = null) {
-    if (filename) {
-        filename = `${filename}.png`;
-    }
-
-    const img = await screenshot({ filename, format: 'png', screen });
-    return img;
-}
-
-async function screenShotTest(screen = 0, filename = null) {
-    if (filename) {
-        filename = `${filename}.png`;
-    }
-
-    const img = await screenshot({ filename, format: 'png', screen });
-    return img;
-}
-
-async function processImage(img) {
-    const processed = await sharp(img)
-        // Black pixels below threshold, white above = way easier for OCR to recognize text
-        .threshold(120)
-        .png()
-        //.negate()
-        .toBuffer();
-
-    return processed;
 }
 
 function findNumber(arr, start, end) {
@@ -300,37 +323,27 @@ function findNumber(arr, start, end) {
     return null;
 }
 
-async function screenshotBackground(filename = 'screenshot') {
-    await new Promise((resolve, reject) => {
-        childProcess.exec(
-            'python lost-ark-screenshot.py',
-            {
-                timout: 5000,
-            },
-            (err, stdout, stderr) => {
-                if (err) {
-                    console.log('Failed to take screenshot using python');
-                    if (err.code == 1) {
-                        console.log(
-                            '\nSeems like you do not have python installed. Please install it to use this feature.\n'
-                        );
-                    }
+const IMAGE_POSITION = {
+    CENTER: 'CENTER',
+    BOTTOM: 'BOTTOM',
+};
 
-                    console.log(err.message);
-                    reject(err);
-                } else {
-                    console.log(err, stdout, stderr);
-                    resolve();
-                }
-            }
-        );
-    });
+const extractImagePosition = {
+    CENTER: (imageMetadata) => ({
+        left: imageMetadata.width / 2 - 250,
+        top: imageMetadata.height / 2 - 150,
+        width: 500,
+        height: 250,
+    }),
+    BOTTOM: (imageMetadata) => ({
+        left: imageMetadata.width / 2 - 250,
+        top: imageMetadata.height - 120,
+        width: imageMetadata.width - (imageMetadata.width / 2 - 250),
+        height: 120,
+    }),
+};
 
-    const image = await sharp('screenshot.png')
-        .sharpen()
-        .threshold(120)
-        .toBuffer();
-    //.toFile('test.png');
-}
-screenShotTest(0, 'testing');
+const getExtractImageOptions = (metadata, imagePosition) =>
+    extractImagePosition[imagePosition](metadata);
+
 module.exports = QueueRecognizer;
