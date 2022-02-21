@@ -12,7 +12,7 @@ There's no automation at play here!
 ## Installation
 
 1. Download and install [Node.js](https://nodejs.org/en/)
-2. Clone this repo (or download the [zip](https://github.com/Birkbjo/WoW-Queue-Alert/archive/master.zip))
+2. Clone this repo (or download the [zip](https://github.com/Birkbjo/Lost-Ark-Queue-Monitor/archive/refs/heads/master.zip))
 3. Open a terminal and `cd` to the downloaded folder and run `npm install`.
 
 ### Easy mode
