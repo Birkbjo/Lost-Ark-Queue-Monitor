@@ -13,7 +13,10 @@ There's no automation at play here!
 
 1. Download and install [Node.js](https://nodejs.org/en/)
 2. Clone this repo (or download the [zip](https://github.com/Birkbjo/Lost-Ark-Queue-Monitor/archive/refs/heads/master.zip))
-3. Open a terminal and `cd` to the downloaded folder and run `npm install`.
+3. 
+    a. Open a terminal and `cd` to the downloaded folder and run `npm install`.
+    
+    b. See Easy Mode below
 
 ### Easy mode
 
@@ -47,7 +50,7 @@ To get notifications to your device:
 
 ### Configuration
 
-The user configuration-file is located in `config.json`. If you haven't ran the program yet you can create it or just modify `default.config.json`.
+The user configuration-file is located in `config.json`. If you haven't run the program yet you can create it or just modify `default.config.json`.
 
 `PUSHBULLET` - Contains parameters for pushbullet integration. See [Notifications](#notifications).
 
@@ -63,7 +66,7 @@ The user configuration-file is located in `config.json`. If you haven't ran the 
 
 #### --dry
 
-Do a dry-run, which 'simulates' queue completion. Use this to test notifications-setup and get sample images of each monitor. Note that the volume may be loud!
+Do a dry-run, which 'simulates' queue completion. Use this to test notifications-setup and get sample images of Lost Ark. Note that the volume may be loud!
 
 #### --mute, -m
 
@@ -89,3 +92,5 @@ Sets log level to debug. Also outputs the processed image the OCR uses for recog
 -   The client must be english. Support for other languages should be possible, but I need screenshots (and the words in text-form) for both queue-screen and character select screen.
 
 -   I'm using [edge-js](https://www.npmjs.com/package/edge-js) to be able to run C#-code that takes the actual screenshot. This requires `.Net framework` - most Windows installations hopefully has this already, but it can be downloaded from here if you face issues: https://www.microsoft.com/en-us/download/details.aspx?id=30653
+
+- Only Windows is supported, but that should hopefully not be a problem, since Lost Ark only supports Windows anyway!
