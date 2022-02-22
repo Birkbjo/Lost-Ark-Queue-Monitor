@@ -176,7 +176,8 @@ class QueueRecognizer {
             );
             s.extract(extractOpts);
         }
-        return s.threshold(90);
+        const threshold = config.PIXEL_THRESHOLD || 70;
+        return s.threshold(threshold);
     }
 
     async recognize(img, processOpts = { position: IMAGE_POSITION.CENTER }) {

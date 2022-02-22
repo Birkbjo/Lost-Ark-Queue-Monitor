@@ -62,6 +62,9 @@ The user configuration-file is located in `config.json`. If you haven't run the 
 
 `POSITION_THRESHOLD` - Queue position threshold for sending a notification regardless of `UPDATE_INTERVAL`. If your position is lower than this, a notifcation is sent. Default: 200
 
+`PIXEL_THRESHOLD` - Threshold used to make it easier for OCR to recognize text. Any pixel value greater than or equal to the threshold value will be set to 255, otherwise it will be set to 0. This means we create a high-contrast "black and white"-image. Adjust this if the OCR has trouble recognizing the text on your screen.
+
+
 ### CLI options
 
 #### --dry
