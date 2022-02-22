@@ -5,6 +5,7 @@ const sharp = require('sharp');
 const { sleep, config, playSound, formatSecondsToTime } = require('./utils');
 
 const WinScreenshot = require('./screenshot/index.js');
+const MAX_RETRIES = 10
 
 class QueueRecognizer {
     constructor({ debug, mute, fullCapture }, notifier, bottomBar) {
@@ -29,7 +30,7 @@ class QueueRecognizer {
 
         this.pos = null;
 
-        this.retries = 10;
+        this.retries = MAX_RETRIES;
     }
 
     async terminate() {
@@ -244,6 +245,7 @@ class QueueRecognizer {
 
         if (pos) {
             this.handlePositionUpdate(pos);
+            this.retries = MAX_RETRIES;
         } else {
             if (this.retries-- < 1) {
                 this.bottomBar.log.write(
