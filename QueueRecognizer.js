@@ -234,7 +234,7 @@ class QueueRecognizer {
             !this.positionNotificationSent && pos <= positionThreshold;
 
         if (positionSend) {
-            positionNotificationSent = true;
+            this.positionNotificationSent = true;
             log.debug("Position below threshold, sending notification");
         }
         if (positionSend || now - lastUpdate >= updateThreshold) {
