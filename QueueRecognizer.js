@@ -66,7 +66,7 @@ class QueueRecognizer {
             }
         }
         log.info('\nQueue complete! Shutting down...');
-        this.ocrWorker.terminate();
+        await this.ocrWorker.terminate();
 
         await this.queueFinished(argv);
     }
@@ -117,7 +117,7 @@ class QueueRecognizer {
             log.debug('No queue found, check if logged in');
             let [screenText, words] = await this.recognize(
                 img,
-                IMAGE_POSITION.BOTTOM
+                { position: IMAGE_POSITION.BOTTOM }
             );
             [queueWordMatches, loggedInMatches] = countWords(words);
         }
@@ -239,16 +239,11 @@ class QueueRecognizer {
         }
         if (positionSend || now - lastUpdate >= updateThreshold) {
             if (this.notifier.active) {
+                const estimatedStr = `\nEstimated time left: ${estimatedTime}.\nETA: ${etaStr}.`;
                 this.notifier.notify(
                     "Queue position update",
-                    `You are now in position: ${pos}.
-                    ${
-                        shouldRenderEstimatedTime
-                            ? `Estimated time left: ${estimatedTime}.
-                    ETA: ${etaStr}.`
-                            : ""
-                    }`
-                );
+                    `You are now in position: ${pos}.${estimatedStr}`
+                )
                 this.lastNotificationTime = new Date();
             }
             return true;
