@@ -215,29 +215,45 @@ class QueueRecognizer {
             this.startPos = pos;
         }
 
+        const { estimatedTime, etaDate } = this.getEstimatedTime(pos);
+        const shouldRenderEstimatedTime =
+            estimatedTime != null && etaDate != null;
+        const etaStr = shouldRenderEstimatedTime
+            ? etaDate.toTimeString().substr(0, 8)
+            : "";
+
+        this.bottomBar.updateBottomBar(
+            `Position: ${pos}. ${
+                shouldRenderEstimatedTime
+                    ? `Estimated time left: ${estimatedTime}. ETA: ${etaStr}`
+                    : ""
+            }`
+        );
+
         const positionSend =
             !this.positionNotificationSent && pos <= positionThreshold;
 
         if (positionSend) {
             positionNotificationSent = true;
-            log.debug('Position below threshold, sending notification');
+            log.debug("Position below threshold, sending notification");
         }
         if (positionSend || now - lastUpdate >= updateThreshold) {
             if (this.notifier.active) {
                 this.notifier.notify(
-                    'Queue position update',
-                    `You are now in position: ${pos}.`
+                    "Queue position update",
+                    `You are now in position: ${pos}.
+                    ${
+                        shouldRenderEstimatedTime
+                            ? `Estimated time left: ${estimatedTime}.
+                    ETA: ${etaStr}.`
+                            : ""
+                    }`
                 );
                 this.lastNotificationTime = new Date();
             }
             return true;
         }
 
-        const { estimatedTime, etaDate } = this.getEstimatedTime(pos);
-        const etaStr = etaDate.toTimeString().substr(0, 8);
-        this.bottomBar.updateBottomBar(
-            `Position: ${pos}. Estimated time left: ${estimatedTime}. Eta: ${etaStr}`
-        );
         return false;
     }
 
